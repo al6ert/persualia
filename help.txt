@@ -13,3 +13,8 @@ Para guardar el json con las claves:
     npm run env
     cd ..
     firebase deploy --only functions
+
+GOOGLE SHEET
+
+Para escribir en un google sheet hay que hacer share del doc con:
+    firebase-adminsdk-qxvgr@landbot-persualia.iam.gserviceaccount.com
