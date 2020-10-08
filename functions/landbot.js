@@ -1,5 +1,5 @@
 const functions = require('firebase-functions');
-
+const slack = require('./slack');
 /**
  * Landbot API functions
  * @type {[type]}
@@ -9,8 +9,60 @@ const functions = require('firebase-functions');
 /*
  * Salta a cualquier nodo del bot
  */
+exports.sendToNode = functions.https.onRequest(async (req, res) => {
+	const data = req.body;	
+	var request = require('request-promise');	
+	var options = {
+	  'method': 'PUT',
+	  'url': 'https://api.landbot.io/v1/customers/'+data.userId+'/assign_bot/'+data.botId+'/',
+	  'headers': {
+	    'Authorization': functions.config().env[data.account].landbot.token,//data.token,
+	    'Content-Type': ['application/json', 'application/json']
+	  },
+	  body: JSON.stringify({"launch":true,"node":data.node})
+	};	
+	try {
+		const body = await request(options);
+		res.send(JSON.parse(body));
+	}
+	catch (error) {
+		throw new Error(error);
+	}	
+});
 
-exports.sendToNode = functions.https.onCall(async (data, _context) => {
+
+exports.landbotListener = functions.https.onRequest(async (req, res) => {	
+	console.log(req.body);
+	const client = req.body.messages[0].customer.slackChannelInfo.client;	
+	if (client === null) req.status(202).send("Customer whith no customer");//$end();
+	const senderType = req.body.messages[0].sender.type;
+	if (senderType !== `customer`) req.status(202).send("Message is not from a customer");//$end();
+	const text = req.body.messages[0].data.body;
+	const landbotUserId = req.body.messages[0].sender.id;
+ 	const landbotUserName = req.body.messages[0].sender.name;
+	const slackChannelName = `user-${client}-${landbotUserId}`;
+	
+	const slackBotToken = functions.config().env[client].slack.xoxb_token;// auths.slack_bot.bot_token;
+// get data from custom "slackchannelinfo" variable in Landbot 
+
+	const options = {
+		'slackBotToken':slackBotToken,
+		'slackChannelName':slackChannelName,
+		'landbotUserName':landbotUserName,
+		'landbotUserId':landbotUserId,
+		'text': text
+	}
+	try {
+		const result = await slack.sendMessageToSlackChannel(options);
+		res.send(result);
+	} catch(error) {
+		res.send(error);
+	}			
+});
+
+
+
+/*exports.sendToNode = functions.https.onCall(async (data, _context) => {
 	var request = require('request-promise');	
 	var options = {
 	  'method': 'PUT',
@@ -28,7 +80,7 @@ exports.sendToNode = functions.https.onCall(async (data, _context) => {
 	catch (error) {
 		throw new Error(error);
 	}	
-});
+});*/
 
 exports.sendLocation = functions.https.onCall(async (data, _context) => {
 	var request = require('request-promise');	
@@ -50,42 +102,3 @@ exports.sendLocation = functions.https.onCall(async (data, _context) => {
 	}
 });
 
-exports.createSlackConversation = functions.https.onCall(async (data, _context) => {
-
-	if (!data.token) {
-		var request = require('request-promise');
-		console.log(data);
-		var options = {
-			'method': 'GET',
-			'url':'https://slack.com/oauth/authorize'
-			
-		}
-
-	}
-	
-	/*
-	var request = require('request-promise');
-	console.log(data);
-	console.log(`https://api.landbot.io/v1/channels/${data.channelId}/message_hooks/`);
-	var options = {
-		'method': 'POST',
-		'url': `https://api.landbot.io/v1/channels/${data.cannelId}/message_hooks/`,
-		'headers': {
-		  'Authorization': functions.config().env[data.account].landbot.token,//data.token,
-		  'Content-Type': ['application/json', 'application/json']
-		},
-		body: JSON.stringify({
-			"url": "https://5efa5169abdfa1af788455afc5b00fd8.m.pipedream.net",
-			"name": "from_landbot_to_slack_hook",
-			"token": ""
-		})
-	  };	
-	  try {
-		  const body = await request(options);		
-		  return JSON.parse(body);
-	  }
-	  catch (error) {
-		  throw new Error(error);
-	  }*/
-
-});
