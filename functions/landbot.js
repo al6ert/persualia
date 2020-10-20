@@ -1,5 +1,5 @@
 const functions = require('firebase-functions');
-const slack = require('./slack');
+//const slack = require('./slack');
 /**
  * Landbot API functions
  * @type {[type]}
@@ -9,56 +9,99 @@ const slack = require('./slack');
 /*
  * Salta a cualquier nodo del bot
  */
-exports.sendToNode = functions.https.onRequest(async (req, res) => {
-	const data = req.body;	
+exports.sendToNode = async function (data) {
+	//const data = req.body;	
+	console.log(JSON.stringify(data));
 	var request = require('request-promise');	
 	var options = {
 	  'method': 'PUT',
-	  'url': 'https://api.landbot.io/v1/customers/'+data.userId+'/assign_bot/'+data.botId+'/',
+	  'url': `https://api.landbot.io/v1/customers/${data.userId}/assign_bot/${data.botId}/`,
 	  'headers': {
-	    'Authorization': functions.config().env[data.account].landbot.token,//data.token,
+	    'Authorization': functions.config().env[(data.client).toLowerCase()].landbot.token,
 	    'Content-Type': ['application/json', 'application/json']
 	  },
 	  body: JSON.stringify({"launch":true,"node":data.node})
 	};	
 	try {
 		const body = await request(options);
-		res.send(JSON.parse(body));
+		return body;
 	}
 	catch (error) {
 		throw new Error(error);
 	}	
-});
+}	
 
+exports.sendMessage = async function(data) {
+	const axios = require("axios");
+	try {
+		// Make an HTTP POST request using axios    
+		const response = await axios({
+			method: "POST",
+			url: `https://api.landbot.io/v1/customers/${data.userId}/send_text/`,
+			headers: {
+			"Content-Type": "application/json",
+			'Authorization': functions.config().env[(data.client).toLowerCase()].landbot.token,
+			},
+			data: JSON.stringify({"message":data.text})
+		});   
+		return response.data
+	} catch(err) {		
+		throw(err);
+	}
+}
 
-exports.landbotListener = functions.https.onRequest(async (req, res) => {	
-	console.log(req.body);
-	const client = req.body.messages[0].customer.slackChannelInfo.client;	
-	if (client === null) req.status(202).send("Customer whith no customer");//$end();
-	const senderType = req.body.messages[0].sender.type;
-	if (senderType !== `customer`) req.status(202).send("Message is not from a customer");//$end();
+exports.changeVariable = async function(data) {
+	const axios = require("axios");
+	try {
+		// Make an HTTP PUT request using axios    
+		const response = await axios({
+			method: "PUT",
+			url: `https://api.landbot.io/v1/customers/${data.userId}/fields/${data.variable}`,
+			headers: {
+			"Content-Type": "application/json",
+			'Authorization': functions.config().env[(data.client).toLowerCase()].landbot.token,
+			},
+			data: JSON.stringify({
+				"type": data.type,
+				"extra": {},
+				"value": data.value
+			})
+		});   
+		return response.data
+	} catch(err) {		
+		throw(err);
+	}
+}
+
+/*exports.landbotListener = functions.https.onRequest(async (req, res) => {	
+	console.log(JSON.stringify(req.body));		
+	const client = JSON.parse((req.body.messages[0].customer.slackchannelinfo).replace(/'/g, '"')).client;		
+	if (client === null) return res.status(202).send(Error("Customer whith no client setup"));		
+	const senderType = req.body.messages[0].sender.type;	
+	if (senderType !== `customer`) return res.status(202).send(Error("Message is not from a customer"));
+	
+	console.log(`Client ${client} senderType ${senderType}`);
 	const text = req.body.messages[0].data.body;
 	const landbotUserId = req.body.messages[0].sender.id;
  	const landbotUserName = req.body.messages[0].sender.name;
 	const slackChannelName = `user-${client}-${landbotUserId}`;
 	
-	const slackBotToken = functions.config().env[client].slack.xoxb_token;// auths.slack_bot.bot_token;
-// get data from custom "slackchannelinfo" variable in Landbot 
-
-	const options = {
-		'slackBotToken':slackBotToken,
+	const options = {	
+		'client':client,			
 		'slackChannelName':slackChannelName,
 		'landbotUserName':landbotUserName,
 		'landbotUserId':landbotUserId,
 		'text': text
-	}
-	try {
-		const result = await slack.sendMessageToSlackChannel(options);
-		res.send(result);
+	}	
+	
+	try {		
+		const result = await slack.sendMessage(options);
+		return res.send(result);
 	} catch(error) {
-		res.send(error);
-	}			
-});
+		console.log(error);
+		return res.send(error);
+	}
+});*/
 
 
 
