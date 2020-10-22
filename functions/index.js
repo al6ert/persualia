@@ -12,7 +12,7 @@ exports.googlesheet = require('./googlesheet');*/
 
 //exports.stripe = require('./stripe');
 
-exports.sendMessageFromLandbotCustomerToSlack = functions.https.onRequest(async (req, res) => {	
+exports.sendMessageFromLandbotCustomerToSlack = functions.region('europe-west1').https.onRequest(async (req, res) => {	
     const slack = require('./slack');    
     if (!req.body.messages[0].customer.slackchannelinfo) return res.status(202).send(Error("Customer with no slackchannelinfo"));
 	const client = JSON.parse((req.body.messages[0].customer.slackchannelinfo).replace(/'/g, '"')).client;		
@@ -45,9 +45,9 @@ exports.sendMessageFromLandbotCustomerToSlack = functions.https.onRequest(async 
 	}
 });
 
-exports.createSlackChannelFromLandbot = functions.https.onRequest(async (req, res) => {        
-    const slack = require('./slack');
-    const data = JSON.parse((req.body.slackchannelinfo).replace(/'/g, '"'));         
+exports.createSlackChannelFromLandbot = functions.region('europe-west1').https.onRequest(async (req, res) => {                 
+    const slack = require('./slack');               
+    const data = JSON.parse(req.body).slackchannelinfo;        
     const client = data.client.toLowerCase();
     if (client === null) return res.status(202).send(Error("Customer whith no client setup"));
     const slackUsers = data.slack_users || functions.config().env[client].slack.slack_users;
@@ -87,7 +87,7 @@ exports.createSlackChannelFromLandbot = functions.https.onRequest(async (req, re
     
 });
 
-exports.slackHelloToLandbotNode =  functions.https.onRequest(async (req, res) => {    
+exports.slackHelloToLandbotNode =  functions.region('europe-west1').https.onRequest(async (req, res) => {    
     const slack = require('./slack');
     const data = req.body;    
     try {                
@@ -119,7 +119,7 @@ exports.slackHelloToLandbotNode =  functions.https.onRequest(async (req, res) =>
 
 });
 
-exports.sendMessageFromSlackToCustomer = functions.https.onRequest(async (req, res) => {    
+exports.sendMessageFromSlackToCustomer = functions.region('europe-west1').https.onRequest(async (req, res) => {    
     const slack = require ('./slack');    
     const data = req.body;    
     if (data.type === "url_verification")   { return res.send({"challenge":data.challenge}); }    
