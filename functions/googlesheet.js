@@ -10,21 +10,21 @@ const { google } = require('googleapis');
 const sheets = google.sheets('v4');
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 const auth = new google.auth.JWT(
-  functions.config().env["persualia"].googlesheet.email,
+  functions.config().env["persualia"].google.googlesheet.email,
   null,
-  functions.config().env["persualia"].googlesheet.privatekey,
+  functions.config().env["persualia"].google.googlesheet.privatekey,
   SCOPES
 );
 
-
-
-exports.sendToGoogleSheet = functions.https.onCall(async (data, _context) => {  
-
+exports.sendToGoogleSheet = async function (data) {
+  console.log(JSON.stringify(data));
   return new Promise((resolve, reject) => {
     
     auth.authorize((error, token) => {
-      if (error) throw new Error(error);
-      else {
+      if (error) {
+        console.log(error);
+        throw new Error(error);
+      } else {
         const date = new Date();
         data.values.unshift(date.toLocaleTimeString("es-ES", { timeZone: "Europe/Madrid", hour12: false }));
         data.values.unshift(date.toLocaleDateString("es-ES", { timeZone: "Europe/Madrid", hour12: false }));
@@ -32,7 +32,7 @@ exports.sendToGoogleSheet = functions.https.onCall(async (data, _context) => {
         sheets.spreadsheets.values.append({
           auth: auth,
           spreadsheetId: data.spreadsheetId,
-          range: data.range,
+          range: data.sheet,
           valueInputOption: 'RAW',
           insertDataOption: 'INSERT_ROWS',
           resource: {
@@ -44,11 +44,12 @@ exports.sendToGoogleSheet = functions.https.onCall(async (data, _context) => {
           if (err) {
             throw new Error(err);
           } else {
-            resolve(response.data);
+            console.log(JSON.stringify(response));
+            resolve(response);
           }
         });
       }
     });
   });
-});
+}
 

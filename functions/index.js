@@ -1,5 +1,5 @@
 const functions = require('firebase-functions');
-
+const cors = require('cors')({origin: true});  
 /**
  * Landbot API functions
  * @type {[type]}
@@ -12,8 +12,10 @@ exports.googlesheet = require('./googlesheet');*/
 
 //exports.stripe = require('./stripe');
 
+
 exports.sendMessageFromLandbotCustomerToSlack = functions.region('europe-west1').https.onRequest(async (req, res) => {	
     const slack = require('./slack');    
+    console.log(JSON.stringify(req.body));
     if (!req.body.messages[0].customer.slackchannelinfo) return res.status(202).send(Error("Customer with no slackchannelinfo"));
 	const client = JSON.parse((req.body.messages[0].customer.slackchannelinfo).replace(/'/g, '"')).client;		
 	if (client === null) return res.status(202).send(Error("Customer whith no client setup"));		
@@ -21,7 +23,8 @@ exports.sendMessageFromLandbotCustomerToSlack = functions.region('europe-west1')
     const senderType = req.body.messages[0].sender.type;	    
     const msgtoslack = (req.body.messages[0].customer.msgtoslack === "1");
     const typeofmsgtoslack = typeof (req.body.messages[0].customer.msgtoslack);
-    
+    console.log(typeofmsgtoslack);
+
     if (senderType !== `customer` && !msgtoslack) return res.status(202).send(Error("Message is not from a customer"));		
     var text = req.body.messages[0].data.body;
     if (senderType !== `customer` && msgtoslack) text = `CHATBOT: ${text}`;    
@@ -47,7 +50,8 @@ exports.sendMessageFromLandbotCustomerToSlack = functions.region('europe-west1')
 
 exports.createSlackChannelFromLandbot = functions.region('europe-west1').https.onRequest(async (req, res) => {                 
     const slack = require('./slack');               
-    const data = JSON.parse(req.body).slackchannelinfo;        
+    const data = JSON.parse(req.body).slackchannelinfo;    
+    console.log(JSON.stringify(data));    
     const client = data.client.toLowerCase();
     if (client === null) return res.status(202).send(Error("Customer whith no client setup"));
     const slackUsers = data.slack_users || functions.config().env[client].slack.slack_users;
@@ -151,4 +155,17 @@ exports.sendMessageFromSlackToCustomer = functions.region('europe-west1').https.
         return res.send(error);
     }
     
+});
+
+exports.sendToGoogleSheet = functions.region('europe-west1').https.onRequest(async (req, res) => {           
+    cors(req, res, () => {});
+    const googlesheet = require('./googlesheet');    
+    const data = JSON.parse(req.body);
+    console.log(JSON.stringify(data));        
+    try {
+        const result = await googlesheet.sendToGoogleSheet(data);       
+        return res.send(result.data);        
+    } catch (error) {
+        return res.send(error);
+    }                
 });

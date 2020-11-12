@@ -84,6 +84,7 @@ exports.setChannelTopic = async function (data) {
         		topic: data.topic
 			}
 		});
+		console.log(JSON.stringify(response.data));
 		return response.data;
 	} catch (err) {
 		throw (err);
